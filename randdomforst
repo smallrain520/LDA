@@ -1,49 +1,26 @@
 Welcome to the LDA wiki!
-
 代码实现如下：
-
 lncRNA_disease<-read.table(file = "D:/科研论文/实验数据/TPGLDA-master/data/known_lncRNA_disease_interaction.txt",sep="")
-
 lncRNAsimilarity<-read.table(file = "D:/科研论文/实验数据/TPGLDA-master/data/lncRNAsimilarity.txt",sep="")
-
 diseasesimilarity<-read.table(file = "D:/科研论文/实验数据/TPGLDA-master/data/diseasesimilarity.txt",sep="")
-
 lncRNA_name<-read.table(file = "D:/科研论文/实验数据/TPGLDA-master/data/lncRNA_115.txt",sep="")
-
 disease_name<-read.csv(file = "D:/科研论文/实验数据/TPGLDA-master/data/disease_178.txt",header = F)
-
 lncRNA_lncRNA<-lncRNAsimilarity
-
 disease_disease<-diseasesimilarity
-
 LncRNA_293<-cbind(lncRNA_lncRNA,lncRNA_disease)
-
 LncRNA_293<-cbind(lncRNA_name[,1],LncRNA_652)
-
 disease_lncRNA<-t(lncRNA_disease)
-
 disease_293<-cbind(disease_lncRNA,disease_disease)
-
 disease_293<-cbind(disease_name[,1],disease_652)
-
 lncRNA_disease_All<-merge(x=LncRNA_652,y=disease_652,by=NULL)
-
 d1<-subset(lncRNA_disease_All,select = 1)
-
 d2<-subset(lncRNA_disease_All,select = 295)
-
 d3<-subset(lncRNA_disease_All,select = c(-1,-295))
-
 lncRNA_disease_All<-data.frame(d1,d2,d3)
-
 xy<-which(lncRNA_disease[,]>0,arr.ind = T)
-
 LDA<-cbind(lncRNA_name[xy[,1],1],disease_name[xy[,2],1])
-
 label.fr <- data.frame("label" = c(0))
-
 lncRNA_disease_All <- cbind(label.fr, lncRNA_disease_All)
-
 for (i in 1:nrow(lncRNA_disease_All))
 {
   for (j in 1:nrow(LDA))
@@ -54,96 +31,50 @@ for (i in 1:nrow(lncRNA_disease_All))
     }
   }    
 }
-
-
 write.csv(lncRNA_disease_All, file =  "D:/科研论文/实验材料/lncRNA_disease_115_178.csv")
-
 LDExcl0<-read.csv("D:/科研论文/实验材料/lncRNA_disease_115_178.csv",header = F)
-
 B1=subset(LDExcl0[,], select=-c(V1,V2,V3))
-
 center <- sweep(B1, 2, apply(B1, 2, min),'-') 
-
 R <- apply(B1, 2, max) - apply(B1,2,min)
-
-B2<- sweep(center, 2, R, "/")  
-      
+B2<- sweep(center, 2, R, "/")      
 B3 <- subset(LDExcl0[,], select=c(V1,V2,V3))
-
 LDExcl0 <- cbind(B3, B2)
-
 PositiveSample <- LDExcl0[LDExcl0[,1]==1, ]
-
 UnlabeledSample <- LDExcl0[LDExcl0[,1]==0, ]
-
-
 set.seed(1234)
-
 sp <- sample(nrow(UnlabeledSample), nrow(PositiveSample), replace = FALSE, prob = NULL)
-
 sps<-sort(sp)
-
 NegativeSample <- UnlabeledSample[sps,]
-
 TrainingSample <- rbind(PositiveSample, NegativeSample)
-
 B1 <- subset(TrainingSample[,], select=-(V2:V3))
-
 rf=randomForest(V1~.,data = TrainingSample[,c(-2,-3)],mtry=24, importance = TRUE, ntree=500, na.action=na.omit)
-
 NB<-UnlabeledSample[,c(-2,-3)]
-
   sumauc <- 0
-
   PTB<-TrainingSample[1:540,c(-2,-3)]
-
   NTB<-TrainingSample[541:1080,c(-2,-3)]
-
   for(i in 1:1)
   {
     PTB1 <- PTB[-(((108*(i-1))+1):(108*i)),]
-
     NTB1 <- NTB[-(((108*(i-1))+1):(108*i)),]
-
     TrainB <- rbind(PTB1, NTB1)
-
     PTB2 <- PTB[(((108*(i-1))+1):(108*i)),]
-
-
     TestB <- rbind(PTB2,NB)
-
     rf=randomForest(V1~.,data = TrainB, mtry=24, importance = TRUE, ntree=500, na.action=na.omit)
-
     pred <- predict(rf, TestB)
-
     pred1 <- prediction(pred, TestB$V1)
-
-
     roc <- performance(pred1, "tpr", "fpr")
-
     plot(roc, main = "ROC chart",print.auc=T)
-
     auc <- performance(pred1, "auc")@y.values
-
     print(auc)
-
     plot(roc,xlim=c(0,1),ylim=c(0,1),col='red',
-
          main=paste("ROC curve(","AUC=",auc,")"),
-
          lwd=2,cex.main=1.3,cex.lab=1.2,cex.axis=1.2,font=1.2)
   }
 
 #预测未知的样本
-
 pred <- predict(rf, UnlabeledSample[,c(-1,-2,-3)])
-
 NB1 <- UnlabeledSample[,1:3]
-
 UnlabeledSampleScore <- cbind(NB1, data.frame(pred))
-
 gastriccancer<-UnlabeledSampleScore[which(UnlabeledSampleScore[,3]=="gastric cancer"),]
-
 breastcancer<-UnlabeledSampleScore[which(UnlabeledSampleScore[,3]=="breast cancer"),]
-
 ovariancancer<-UnlabeledSampleScore[which(UnlabeledSampleScore[,3]=="ovarian cancer"),]
